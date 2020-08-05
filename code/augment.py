@@ -2,7 +2,7 @@
 # By Micah Weitzman 
 # Based on agument.py by Jason Wei and Kai Zou
 
-from eda import *
+from eda import eda
 import progressbar 
 import random
 
@@ -36,7 +36,8 @@ if args.alpha:
 
 #generate more data with standard augmentation
 def gen_eda(train_orig, output_file, alpha, num_aug=9):
-    output_data = {"data": []}
+    # output_data = {"data": []}
+    # 
     # {data : list() [
     #       "title": "title", 
     #       "paragraphs": list() [
@@ -59,7 +60,11 @@ def gen_eda(train_orig, output_file, alpha, num_aug=9):
         file.close()
 
     
-    # Going through each question, the algorithm 
+    # Going through each question, the following creates a few augmented answers 
+    #   and randomly selects one to replace. It then replaces the oringal answer with 
+    #   the newly augmented one in the orignal pararaph
+
+    #  TODO: maybe use more augmented sections
     for i, subject in enumerate(data_dict["data"]):
         print('[{} / {}] subjects'.format(i+1, len(data_dict["data"])))
         for j, paragraph in enumerate(subject["paragraphs"]):
