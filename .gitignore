@@ -14,3 +14,7 @@ outputs_f4*
 baseline_cnn*
 baseline_rnn*
 
+.vscode/
+nlp-env/
+__pycache*
+testing.py

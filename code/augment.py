@@ -1,10 +1,14 @@
-# Easy data augmentation techniques for text classification
-# Jason Wei and Kai Zou
+# Easy data augmentation techniques for Question and Answer using SQUAD 
+# By Micah Weitzman 
+# Based on agument.py by Jason Wei and Kai Zou
 
 from eda import *
+import progressbar 
+import random
 
 #arguments to be parsed from command line
 import argparse
+import json 
 ap = argparse.ArgumentParser()
 ap.add_argument("--input", required=True, type=str, help="input file of unaugmented data")
 ap.add_argument("--output", required=False, type=str, help="output file of unaugmented data")
@@ -32,18 +36,44 @@ if args.alpha:
 
 #generate more data with standard augmentation
 def gen_eda(train_orig, output_file, alpha, num_aug=9):
+    output_data = {"data": []}
+    # {data : list() [
+    #       "title": "title", 
+    #       "paragraphs": list() [
+    #           "context": Text itself, 
+    #           "qas": list() [
+    #               {"answers": list() [
+    #                   "answer_start": int(), 
+    #                   "text": Answer text
+    #                   ]
+    #                "question": question text, 
+    #                "id": question id 
+    #               },
+    #           ]
+    #       ]
+    #   ]}
 
     writer = open(output_file, 'w')
-    lines = open(train_orig, 'r').readlines()
+    with open(train_orig, 'r') as file: 
+        data_dict = json.load(file)
+        file.close()
 
-    for i, line in enumerate(lines):
-        parts = line[:-1].split('\t')
-        label = parts[0]
-        sentence = parts[1]
-        aug_sentences = eda(sentence, alpha_sr=alpha, alpha_ri=alpha, alpha_rs=alpha, p_rd=alpha, num_aug=num_aug)
-        for aug_sentence in aug_sentences:
-            writer.write(label + "\t" + aug_sentence + '\n')
-
+    
+    # Going through each question, the algorithm 
+    for i, subject in enumerate(data_dict["data"]):
+        print('[{} / {}] subjects'.format(i+1, len(data_dict["data"])))
+        for j, paragraph in enumerate(subject["paragraphs"]):
+            print('[{} / {}] subjects'.format(i+1, len(data_dict["data"])) + '[{} / {}] paragraph'.format(j+1, len(subject["paragraphs"])))
+            for qa in paragraph["qas"]:
+                sentence = qa["answers"][0]["text"] 
+                aug_sentences = set(eda(sentence, alpha_sr=alpha, alpha_ri=alpha, alpha_rs=alpha, p_rd=alpha, num_aug=num_aug))
+                new_sentence = random.sample(aug_sentences,1)[0] # choose a random new setence 
+                paragraph["context"] = paragraph["context"].replace(sentence, new_sentence)
+                qa["answers"][0]["text"] = new_sentence
+                qa["answers"][0]["answer_start"] = paragraph["context"].find(new_sentence) # update new location of answer 
+        
+    
+    writer.write(json.dumps(data_dict))
     writer.close()
     print("generated augmented sentences with eda for " + train_orig + " to " + output_file + " with num_aug=" + str(num_aug))
 

@@ -42,12 +42,14 @@ def get_only_chars(line):
     line = line.lower()
 
     for char in line:
-        if char in 'qwertyuiopasdfghjklzxcvbnm ':
+        if char in 'qwertyuiopasdfghjklzxcvbnm 0123456789':
             clean_line += char
         else:
             clean_line += ' '
 
     clean_line = re.sub(' +',' ',clean_line) #delete extra spaces
+    if len(clean_line) == 0:
+	    return ""      			
     if clean_line[0] == ' ':
         clean_line = clean_line[1:]
     return clean_line
@@ -84,6 +86,14 @@ def synonym_replacement(words, n):
 	return new_words
 
 def get_synonyms(word):
+	# for words with digits, synonyms replace digits with random ones 
+	new_word = word[:]
+	for i in word: 
+		if i.isdigit():
+			new_word = new_word.replace(i, str(random.randint(0,9)))
+	if new_word != word:
+		return [new_word]
+
 	synonyms = set()
 	for syn in wordnet.synsets(word): 
 		for l in syn.lemmas(): 
@@ -173,6 +183,8 @@ def add_word(new_words):
 def eda(sentence, alpha_sr=0.1, alpha_ri=0.1, alpha_rs=0.1, p_rd=0.1, num_aug=9):
 	
 	sentence = get_only_chars(sentence)
+	if sentence == "":
+		return [sentence, sentence]
 	words = sentence.split(' ')
 	words = [word for word in words if word is not '']
 	num_words = len(words)
