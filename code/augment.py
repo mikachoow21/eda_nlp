@@ -3,8 +3,10 @@
 # Based on agument.py by Jason Wei and Kai Zou
 
 from eda import eda
-import progressbar 
+from tqdm import tqdm
 import random
+import codecs
+import re
 
 #arguments to be parsed from command line
 import argparse
@@ -54,32 +56,59 @@ def gen_eda(train_orig, output_file, alpha, num_aug=9):
     #       ]
     #   ]}
 
-    writer = open(output_file, 'w')
     with open(train_orig, 'r') as file: 
-        data_dict = json.load(file)
+        data = file.read()
+        data_dict = json.loads(data)
         file.close()
 
     
     # Going through each question, the following creates a few augmented answers 
     #   and randomly selects one to replace. It then replaces the oringal answer with 
     #   the newly augmented one in the orignal pararaph
-
+    
+    print("Augmenting questions")
+    prog_bar = tqdm(data_dict["data"])
     #  TODO: maybe use more augmented sections
-    for i, subject in enumerate(data_dict["data"]):
-        print('[{} / {}] subjects'.format(i+1, len(data_dict["data"])))
-        for j, paragraph in enumerate(subject["paragraphs"]):
-            print('[{} / {}] subjects'.format(i+1, len(data_dict["data"])) + '[{} / {}] paragraph'.format(j+1, len(subject["paragraphs"])))
+    for subject in prog_bar:
+        #subject["title"] = codecs.decode(subject["title"], 'unicode_escape')
+        for paragraph in subject["paragraphs"]:
+           # paragraph["context"] = codecs.decode(paragraph["context"], 'unicode_escape')
+            prog_bar.set_description("%s" % subject["title"])
+            # print('[{} / {}] subjects'.format(i+1, len(data_dict["data"])) + '[{} / {}] paragraph'.format(j+1, len(subject["paragraphs"])))
             for qa in paragraph["qas"]:
-                sentence = qa["answers"][0]["text"] 
+               # sentence = codecs.decode(qa["answers"][0]["text"], 'unicode_escape')
+                sentence = qa["answers"][0]["text"]
+              #  qa["question"] = codecs.decode(qa["question"], 'unicode_escape')
                 aug_sentences = set(eda(sentence, alpha_sr=alpha, alpha_ri=alpha, alpha_rs=alpha, p_rd=alpha, num_aug=num_aug))
                 new_sentence = random.sample(aug_sentences,1)[0] # choose a random new setence 
                 paragraph["context"] = paragraph["context"].replace(sentence, new_sentence)
                 qa["answers"][0]["text"] = new_sentence
-                qa["answers"][0]["answer_start"] = paragraph["context"].find(new_sentence) # update new location of answer 
-        
-    
-    writer.write(json.dumps(data_dict))
-    writer.close()
+
+
+    print("Finding answer locations")
+    ans_time_bar = tqdm(data_dict["data"])
+    omit_answers = 0
+    for subject in ans_time_bar:
+        for paragraph in subject["paragraphs"]:
+            for qa in paragraph["qas"]:
+                s= qa["answers"][0]["text"]
+                matches = re.finditer(s, paragraph["context"])
+                mat_pos = [match.start() for match in matches]
+                if len(mat_pos) and paragraph["context"].find(s) != -1:
+                    qa["answers"][0]["answer_start"] = min(mat_pos, key=lambda x:abs(x-qa["answers"][0]["answer_start"]))
+                else: 
+                    paragraph["qas"].remove(qa)
+                    omit_answers += 1
+                    
+    # print("Questions omitted: %d" % omit_answers)
+    # with open(output_file, 'w', encoding='utf-8') as writer:
+    #     json.dump(data_dict, writer, ensure_ascii=False)
+    #     writer.close()
+    # print("generated augmented sentences with eda for " + train_orig + " to " + output_file + " with num_aug=" + str(num_aug))
+    print("Questions omitted: %d" % omit_answers)
+    with open(output_file, 'w') as writer:
+        json.dump(data_dict, writer)
+        writer.close()
     print("generated augmented sentences with eda for " + train_orig + " to " + output_file + " with num_aug=" + str(num_aug))
 
 #main function

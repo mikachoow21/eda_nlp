@@ -31,7 +31,6 @@ stop_words = ['i', 'me', 'my', 'myself', 'we', 'our',
 #cleaning up text
 import re
 def get_only_chars(line):
-
     clean_line = ""
 
     line = line.replace("’", "")
@@ -48,7 +47,7 @@ def get_only_chars(line):
             clean_line += ' '
 
     clean_line = re.sub(' +',' ',clean_line) #delete extra spaces
-    if len(clean_line) == 0:
+    if len(clean_line) == 0 or len(line) != len(clean_line):
 	    return ""      			
     if clean_line[0] == ' ':
         clean_line = clean_line[1:]
